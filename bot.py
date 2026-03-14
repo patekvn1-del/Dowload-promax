@@ -1,12 +1,12 @@
 import os
-from dotenv import load_dotenv  # thêm nếu dùng .env
-
-load_dotenv()  # đọc file .env (bỏ qua nếu không dùng)
+import yt_dlp
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
 TOKEN = os.environ.get("BOT_TOKEN")
 
 if not TOKEN:
-    raise ValueError("BOT_TOKEN chưa được set!")
+    raise ValueError("BOT_TOKEN chưa được set trong Railway Variables!")
 
 user_links = {}
 
