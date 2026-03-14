@@ -3,7 +3,16 @@ import yt_dlp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
-TOKEN = "7732409041:AAEZn_TMU_s-kLq_IXIpfZw9xdw2cdjpXHA"
+TOKEN = "7732409041:AAEZn_TMU_s-kLq_IXIpfZw9xdw2cdjpXHA"  # ⚠️ Đổi token mới vì token cũ đã bị lộ
+
+# Ghi cookies ra file tạm
+COOKIES_FILE = "/tmp/cookies.txt"
+COOKIES_CONTENT = os.environ.get("YT_COOKIES", "")
+if COOKIES_CONTENT:
+    with open(COOKIES_FILE, "w") as f:
+        f.write(COOKIES_CONTENT)
+
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 user_links = {}
 
@@ -33,14 +42,15 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.edit_message_text("⏳ Đang tải...")
 
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    cookie_opts = {"cookiefile": COOKIES_FILE} if COOKIES_CONTENT else {}
 
     try:
         if data == "video":
             ydl_opts = {
                 "format": "best[ext=mp4]/best",
                 "outtmpl": "/tmp/video.%(ext)s",
-                "http_headers": headers
+                "http_headers": HEADERS,
+                **cookie_opts
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -51,21 +61,22 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ydl_opts = {
                 "format": "bestaudio/best",
                 "outtmpl": "/tmp/music.%(ext)s",
-                "http_headers": headers,
+                "http_headers": HEADERS,
                 "postprocessors": [{
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "mp3"
-                }]
+                }],
+                **cookie_opts
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
-                file = "/tmp/music.mp3"
-            await query.message.reply_audio(audio=open(file, "rb"))
+            await query.message.reply_audio(audio=open("/tmp/music.mp3", "rb"))
 
         elif data == "thumb":
             ydl_opts = {
                 "skip_download": True,
-                "http_headers": headers
+                "http_headers": HEADERS,
+                **cookie_opts
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
