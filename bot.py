@@ -3,7 +3,10 @@ import yt_dlp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
-TOKEN = os.environ.get("BOT_TOKEN")
+# ✅ Thay dòng dưới đây
+TOKEN = "7732409041:AAEZn_TMU_s-kLq_IXIpfZw9xdw2cdjpXHA"
+
+app = ApplicationBuilder().token(TOKEN).build()
 
 if not TOKEN:
     raise ValueError("BOT_TOKEN chưa được set trong Railway Variables!")
