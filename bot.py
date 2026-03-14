@@ -3,18 +3,11 @@ import yt_dlp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
-# ✅ Thay dòng dưới đây
 TOKEN = "7732409041:AAEZn_TMU_s-kLq_IXIpfZw9xdw2cdjpXHA"
-
-app = ApplicationBuilder().token(TOKEN).build()
-
-if not TOKEN:
-    raise ValueError("BOT_TOKEN chưa được set trong Railway Variables!")
 
 user_links = {}
 
 async def receive(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     url = update.message.text
     user_links[update.message.from_user.id] = url
 
@@ -31,65 +24,58 @@ async def receive(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     query = update.callback_query
     await query.answer()
 
     user = query.from_user.id
     url = user_links.get(user)
-
     data = query.data
 
-    await query.edit_message_text("Downloading...")
+    await query.edit_message_text("⏳ Đang tải...")
 
-    if data == "video":
-
-        ydl_opts = {
-            "format": "best",
-            "outtmpl": "video.%(ext)s"
-        }
-
-    elif data == "mp3":
-
-        ydl_opts = {
-            "format": "bestaudio/best",
-            "outtmpl": "music.%(ext)s",
-            "postprocessors": [{
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3"
-            }]
-        }
-
-    elif data == "thumb":
-
-        ydl_opts = {
-            "skip_download": True
-        }
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
     try:
+        if data == "video":
+            ydl_opts = {
+                "format": "best[ext=mp4]/best",
+                "outtmpl": "/tmp/video.%(ext)s",
+                "http_headers": headers
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file = ydl.prepare_filename(info)
+            await query.message.reply_video(video=open(file, "rb"))
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        elif data == "mp3":
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "outtmpl": "/tmp/music.%(ext)s",
+                "http_headers": headers,
+                "postprocessors": [{
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3"
+                }]
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file = "/tmp/music.mp3"
+            await query.message.reply_audio(audio=open(file, "rb"))
 
-            info = ydl.extract_info(url, download=True)
+        elif data == "thumb":
+            ydl_opts = {
+                "skip_download": True,
+                "http_headers": headers
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+            await query.message.reply_photo(info["thumbnail"])
 
-            if data == "thumb":
-                await query.message.reply_photo(info["thumbnail"])
-                return
-
-            file = ydl.prepare_filename(info)
-
-        if data == "mp3":
-            await query.message.reply_audio(audio=open(file,"rb"))
-        else:
-            await query.message.reply_video(video=open(file,"rb"))
-
-    except:
-        await query.message.reply_text("Download lỗi")
+    except Exception as e:
+        await query.message.reply_text(f"❌ Lỗi: {str(e)}")
 
 
 app = ApplicationBuilder().token(TOKEN).build()
-
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, receive))
 app.add_handler(CallbackQueryHandler(button))
-
 app.run_polling()
